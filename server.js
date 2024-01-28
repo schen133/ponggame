@@ -28,12 +28,19 @@ io.sockets.on("connection", newConnection);
 
 // Global variables
 
-const player1 = [20, 50];
-const player2 = [40, 50];
+const player1 = [20, 200];
+const player2 = [40, 200];
 
 const players = {};
 
+const count = {};
+
 var game_started = false;
+
+// for ball
+const ball_coordinates = [];
+
+var ball_speed = -5;
 
 // a two player hashmap with their socket key matched in the
 
@@ -54,19 +61,30 @@ function newConnection(socket) {
   //      socket.id: []    }
   if (!(socket.id in players)) {
     if (Object.keys(players).length > 0) {
-      players[socket.id] = [100, 50];
+      count[socket.id] = 2;
+
+      players[socket.id] = [300, 150];
     } else {
-      players[socket.id] = [20, 50];
+      count[socket.id] = 1;
+      players[socket.id] = [20, 150];
     }
     console.log(players);
   }
 
   //
   if (Object.keys(players).length === 2) {
+    var gamestart_data = {
+      players: players,
+      count: count,
+      ball_initial: [150, 150],
+      ball_speed_x: ball_speed,
+    };
     //
-    io.sockets.emit("gameStarts", players);
-  }
 
+    console.log(gamestart_data);
+    // io.sockets.emit("gameStarts", players);
+    io.sockets.emit("gameStarts", gamestart_data);
+  }
 
   socket.on("keyPressed", changeCoordinates);
 
@@ -80,8 +98,28 @@ function newConnection(socket) {
     // update the player's value and broadcast updated value to everyone
   }
 
-  
-
-
-
+  socket.on("changeDirection_x", (speed) => {
+    ball_speed = -ball_speed;
+    io.sockets.emit("receiveX", ball_speed);
+  });
 }
+
+// how do i synchronize the ball movement right here?
+
+// ball obviously needs to have a coordinate in the server itself
+// then we can constantly broadcast that position to all the clients
+
+// send in a coordinate and goes in a direction, then when it hits something
+// in the one of the client, it sends smt back to the server?
+
+// but which client tho
+
+// or we can possibly just do, the server consistently sends out ball movement to every clients
+
+// server has update ball position
+// the client send a ball posiiton
+
+// once it hits a bounce off, client emit a update
+// then server receives that and broadcast new direction of ball movement to all clients
+
+// if it hits
