@@ -14,11 +14,6 @@ var player_2_coordinates;
 // x and y for the ball
 var ball_coordinates;
 
-var rec_width = 10;
-var rec_length = 70;
-
-var ball_x_speed;
-var ball_y_speed;
 
 var me_id;
 
@@ -27,6 +22,8 @@ var opp_id;
 const max_width = 400;
 const max_height = 400;
 
+var rec_width = 10;
+var rec_length = 150;
 const ball_radius = 15;
 
 var player_count;
@@ -78,6 +75,10 @@ function setup() {
     console.log(ball_x_speed);
   });
 
+  socket.on("ballposition", (data) => {
+    ball_coordinates = data;
+  });
+
   //
 }
 
@@ -94,28 +95,22 @@ function draw() {
   if (player_1_coordinates) {
     fill(0);
 
-    rect(player_1_coordinates[0], player_1_coordinates[1], 10, 70);
+    rect(player_1_coordinates[0], player_1_coordinates[1], 10, rec_length);
   }
 
   if (player_2_coordinates) {
     fill(255, 204, 0);
 
-    rect(player_2_coordinates[0], player_2_coordinates[1], 10, 70);
+    rect(player_2_coordinates[0], player_2_coordinates[1], 10, rec_length);
   }
 
+  // if ball_coordinates, keep drawing out where the ball is
   if (ball_coordinates) {
     fill(255, 128, 0);
     // draws the ball but with a function that always changes the x and y coordinate values of the ball
     ellipse(ball_coordinates[0], ball_coordinates[1], ball_radius, ball_radius);
   }
   keyPressed();
-
-  if (ball_x_speed && ball_coordinates) {
-    ball_movement();
-    handleBoardHit();
-  }
-
-  // ellipse(mouseX, mouseY, 80, 80);
 }
 
 function ball_movement() {
@@ -125,63 +120,6 @@ function ball_movement() {
 }
 
 //
-
-function draw_ball() {}
-
-// more funciton for ball's movement later
-// ** ball movement handling
-function handleBoardHit() {
-  // when it hits opposing player's board
-  // emit ball direciton change for board
-  // to change direction, we can just do
-
-  var x = ball_coordinates[0];
-  var y = ball_coordinates[1];
-
-  // always the opponents
-
-  // always the opposing board
-  var coor_x = player_2_coordinates[0];
-  var coor_y = player_2_coordinates[1];
-
-  // whenever it hits the board
-  // negative ball speed, hitting player1's board
-  // in opposing view
-  if (player_count === 2) {
-    if (
-      x + ball_radius <= rec_width + coor_x &&
-      y >= coor_y &&
-      y <= coor_y + rec_length
-    ) {
-      // hits opponent, send this
-      // should receive a signal right away and changes direction of x
-
-      socket.emit("changeDirection_x", -1);
-    }
-  }
-
-  if (player_count === 1) {
-    if (
-      x + ball_radius >= rec_width + coor_x &&
-      y >= coor_y &&
-      y <= coor_y + rec_length
-    ) {
-      console.log("hit, change now!");
-
-      // hits opponent, send this
-      // should receive a signal right away and changes direction of x
-      socket.emit("changeDirection_x", -1);
-    }
-  }
-}
-
-// handles hititng wall, when it hits any wall
-function handleWallHit() {
-  // when it hits the opposing scoring wall,
-  // emit ball resetting
-  // when it hits top or bottom wall,
-  // emit ball direction change for wall
-}
 
 // ** player1's movements
 function keyPressed() {

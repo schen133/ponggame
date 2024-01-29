@@ -28,8 +28,9 @@ io.sockets.on("connection", newConnection);
 
 // Global variables
 
-const player1 = [20, 200];
-const player2 = [40, 200];
+// make this a reference of who ever the first player is in the hashmap
+var player1;
+var player2;
 
 const players = {};
 
@@ -38,9 +39,10 @@ const count = {};
 var game_started = false;
 
 // for ball
-const ball_coordinates = [];
+const ball_coordinates = [150, 150];
 
-var ball_speed = -5;
+var xspeed = -3;
+var yspeed = -1;
 
 // a two player hashmap with their socket key matched in the
 
@@ -50,6 +52,9 @@ function newConnection(socket) {
     delete players[socket.id];
 
     console.log(players);
+
+    console.log(player1);
+    console.log(player2);
   });
 
   //   ensured each client has its own socket id
@@ -64,11 +69,15 @@ function newConnection(socket) {
       count[socket.id] = 2;
 
       players[socket.id] = [300, 150];
+      player2 = players[socket.id];
+
+      console.log(player2);
     } else {
       count[socket.id] = 1;
       players[socket.id] = [20, 150];
+      player1 = players[socket.id];
+      console.log(player1);
     }
-    console.log(players);
   }
 
   //
@@ -77,13 +86,17 @@ function newConnection(socket) {
       players: players,
       count: count,
       ball_initial: [150, 150],
-      ball_speed_x: ball_speed,
+      ball_speed_x: xspeed,
     };
     //
 
     console.log(gamestart_data);
     // io.sockets.emit("gameStarts", players);
     io.sockets.emit("gameStarts", gamestart_data);
+
+    // setTimeout(() => round(), 5000);
+
+    setInterval(round, 16);
   }
 
   socket.on("keyPressed", changeCoordinates);
@@ -98,28 +111,55 @@ function newConnection(socket) {
     // update the player's value and broadcast updated value to everyone
   }
 
-  socket.on("changeDirection_x", (speed) => {
-    ball_speed = -ball_speed;
-    io.sockets.emit("receiveX", ball_speed);
-  });
+  // socket.on("changeDirection_x", (speed) => {
+  //   ball_speed = -ball_speed;
+  //   io.sockets.emit("receiveX", ball_speed);
+  // });
 }
 
-// how do i synchronize the ball movement right here?
+var game_progress = true;
 
-// ball obviously needs to have a coordinate in the server itself
-// then we can constantly broadcast that position to all the clients
+const rec_width = 10;
+const rec_length = 150;
+const r = 15;
+const height = 400;
+const width = 400;
 
-// send in a coordinate and goes in a direction, then when it hits something
-// in the one of the client, it sends smt back to the server?
+function round() {
+  //
 
-// but which client tho
+  // var ball_x = ball_coordinates[0] + ball_radius;
+  // var ball_y = ball_coordinates[1] + ball_radius;
 
-// or we can possibly just do, the server consistently sends out ball movement to every clients
+  // for all values within players
+  const iterator = Object.values(players);
 
-// server has update ball position
-// the client send a ball posiiton
+  const player1 = iterator[0];
+  const player2 = iterator[1];
 
-// once it hits a bounce off, client emit a update
-// then server receives that and broadcast new direction of ball movement to all clients
+  // ball_x and ball_y encountering with
 
-// if it hits
+  ball_coordinates[0] += xspeed;
+  ball_coordinates[1] += yspeed;
+  //   left condition is so it bounces off right
+  if (
+    (ball_coordinates[0] > player2[0] - r &&
+      ball_coordinates[1] >= player2[1] &&
+      ball_coordinates[1] <= player2[1] + rec_length) ||
+    (ball_coordinates[0] < player1[0] + r * 2 &&
+      ball_coordinates[1] >= player2[1] &&
+      ball_coordinates[1] <= player2[1] + rec_length)
+  ) {
+    xspeed = -xspeed;
+  }
+  if (ball_coordinates[1] > height - r || ball_coordinates[1] < r) {
+    yspeed = -yspeed;
+  }
+  // console.log("calls");
+
+  // broadcast ball_coordianates
+
+  io.sockets.emit("ballposition", ball_coordinates);
+}
+
+function startgame(gamestarts) {}
