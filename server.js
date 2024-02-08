@@ -15,8 +15,6 @@ var socket = require("socket.io");
 // the thing keep track of the inputs/outputs
 var io = socket(server);
 
-// deal with events
-
 // a event for socket, is a connection
 // or a message
 // or a disconnection
@@ -28,59 +26,46 @@ io.sockets.on("connection", newConnection);
 
 // Global variables
 
-// make this a reference of who ever the first player is in the hashmap
-var player1;
-var player2;
-
 const players = {};
 
 const count = {};
 
 var game_started = false;
 
-// for ball
+// Global variables that doesn't change
 const ball_coordinates = [150, 150];
 
 var xspeed = -3;
 var yspeed = -1;
 
-// a two player hashmap with their socket key matched in the
-
+// every actions by socket will be listened to here
 function newConnection(socket) {
-  // on disconnecting, remove socket id from hashmap
+  // on socket disconnecting, remove socket id from hashmap
   socket.on("disconnect", () => {
     delete players[socket.id];
 
-    console.log(players);
-
-    console.log(player1);
-    console.log(player2);
+    console.log(socket.id, "has quit the game");
   });
 
-  //   ensured each client has its own socket id
+  // ensured each client has its own socket id
+  // so then when we broadcast out all players positions
+  // we can use that record (their own socketID) to distinguish their own position vs opponent's
   socket.emit("socketID", socket.id);
 
   //   on new connection, add socket id to hashmap
-
   //   {socket.id: [],
   //      socket.id: []    }
   if (!(socket.id in players)) {
     if (Object.keys(players).length > 0) {
       count[socket.id] = 2;
-
       players[socket.id] = [300, 150];
-      player2 = players[socket.id];
-
-      console.log(player2);
     } else {
       count[socket.id] = 1;
       players[socket.id] = [20, 150];
-      player1 = players[socket.id];
-      console.log(player1);
     }
   }
 
-  //
+  // TODOs: fix up some data not needed in the frontend
   if (Object.keys(players).length === 2) {
     var gamestart_data = {
       players: players,
@@ -88,59 +73,52 @@ function newConnection(socket) {
       ball_initial: [150, 150],
       ball_speed_x: xspeed,
     };
-    //
 
-    console.log(gamestart_data);
-    // io.sockets.emit("gameStarts", players);
     io.sockets.emit("gameStarts", gamestart_data);
 
-    // setTimeout(() => round(), 5000);
-
-    setInterval(round, 16);
+    // repeatly executes a logic with an interval
+    // 16 milliseconds for each function execution
+    // approximately 60 times a second -> to achieve 60 FPS ball movement on client side
+    // do ball logic and emit every 16ms
+    // or should be do logic the entire time and emit every 16 seconds?
+    setInterval(round, 5);
   }
 
+  // each time server socket instance receives a signal from client socket instance
+  // we call the changeCoordinates function and update player position and broadcast to all sockets
   socket.on("keyPressed", changeCoordinates);
-
   function changeCoordinates(data) {
     players[socket.id][1] = players[socket.id][1] + data.y;
-
-    // emit the new player position to all player
+    // broadcasting here
     io.sockets.emit("positions", players);
-
-    // broadcast it out to all connections
-    // update the player's value and broadcast updated value to everyone
   }
-
-  // socket.on("changeDirection_x", (speed) => {
-  //   ball_speed = -ball_speed;
-  //   io.sockets.emit("receiveX", ball_speed);
-  // });
 }
 
 var game_progress = true;
 
+// player board size (represented as rectangle)
 const rec_width = 10;
 const rec_length = 150;
+
+// ball radius
 const r = 15;
+
+// size of canvas, game board
 const height = 400;
 const width = 400;
 
 function round() {
-  //
-
-  // var ball_x = ball_coordinates[0] + ball_radius;
-  // var ball_y = ball_coordinates[1] + ball_radius;
-
-  // for all values within players
+  // TODOS: Better ball movement physic logics
   const iterator = Object.values(players);
 
   const player1 = iterator[0];
   const player2 = iterator[1];
 
-  // ball_x and ball_y encountering with
+  console.log(player1);
+  console.log(player2);
 
   ball_coordinates[0] += xspeed;
-  ball_coordinates[1] += yspeed;
+  // ball_coordinates[1] += yspeed;
   //   left condition is so it bounces off right
   if (
     (ball_coordinates[0] > player2[0] - r &&
@@ -152,14 +130,27 @@ function round() {
   ) {
     xspeed = -xspeed;
   }
-  if (ball_coordinates[1] > height - r || ball_coordinates[1] < r) {
-    yspeed = -yspeed;
-  }
+  // if (ball_coordinates[1] > height - r || ball_coordinates[1] < r) {
+  //   yspeed = -yspeed;
+  // }
   // console.log("calls");
 
-  // broadcast ball_coordianates
-
+  // In the end, broadcast ball_coordinates to all connected sockets
   io.sockets.emit("ballposition", ball_coordinates);
 }
 
 function startgame(gamestarts) {}
+
+// TODOs:
+// Probbaly need a lobby system as well
+// each bucket can fit two players(sockets) who makes a connection to the server
+//
+
+// Game object
+// on each full lobby, we create a game object
+// it can create many round instances and keep track of the score returned by each round
+
+// Round object
+// on each start of the round, we do a return of the score
+// who won
+// then keep that recorde
