@@ -38,6 +38,22 @@ const ball_coordinates = [150, 150];
 var xspeed = -3;
 var yspeed = -1;
 
+var gameLobby = [];
+// but when
+// when game starts, we can assign a unique gameLobbyID
+// hash it: {gameLobbyID: {}, gameLobbyID: {}}
+// gameLobbyID:{gameStarted: false/true,
+//              player_positions(players): {socketID: [x, y] , socketID: [x, y]}
+//              ball_coordinates: [150, 150]
+//             }
+
+// when game starts, pass gameLobbyID as a constructor into the object intialization
+// this way it will allow O(1) lookup and direct update of the memory allocated for the object
+
+// if a player from a on-going game quits in the middle of the game, we can take him
+// and re-assign him to a game-lobby that's current not filled
+// he loses all data from previous game...
+
 // every actions by socket will be listened to here
 function newConnection(socket) {
   // on socket disconnecting, remove socket id from hashmap
@@ -64,6 +80,14 @@ function newConnection(socket) {
       players[socket.id] = [20, 150];
     }
   }
+
+
+  // on every new connection made, check if there is a game lobby that's ready to start
+  // 
+
+  // if a player from a 
+
+
 
   // TODOs: fix up some data not needed in the frontend
   if (Object.keys(players).length === 2) {
