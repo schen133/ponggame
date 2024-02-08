@@ -1,4 +1,7 @@
-const express = require("express");
+import myPhysics from "./physics.js";
+
+// const express = require("express");
+import express from "express";
 const app = express();
 
 var server = app.listen(3000);
@@ -8,12 +11,13 @@ var server = app.listen(3000);
 // user can see what's in the public directory
 app.use(express.static("public"));
 
-var socket = require("socket.io");
+// var socket = require("socket.io");
+import { Server as socket } from "socket.io";
 
 // create an actual socket that's part of the server
 
 // the thing keep track of the inputs/outputs
-var io = socket(server);
+var io = new socket(server);
 
 // a event for socket, is a connection
 // or a message
@@ -137,6 +141,8 @@ function round() {
 
   const player1 = iterator[0];
   const player2 = iterator[1];
+  
+  myPhysics(player1[0], player1[1], player2[0], player2[1] )
 
   console.log(player1);
   console.log(player2);
