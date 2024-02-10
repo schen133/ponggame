@@ -1,4 +1,4 @@
-import myPhysics from "./physics.js";
+import { p1Contact, p2Contact } from "./physics.js";
 
 // const express = require("express");
 import express from "express";
@@ -39,7 +39,7 @@ var game_started = false;
 // Global variables that doesn't change
 const ball_coordinates = [150, 150];
 
-var xspeed = -3;
+var xspeed = -0.1;
 var yspeed = -1;
 
 var gameLobby = [];
@@ -142,24 +142,29 @@ function round() {
   const player1 = iterator[0];
   const player2 = iterator[1];
   
-  myPhysics(player1[0], player1[1], player2[0], player2[1] )
-
   console.log(player1);
   console.log(player2);
 
   ball_coordinates[0] += xspeed;
   // ball_coordinates[1] += yspeed;
   //   left condition is so it bounces off right
-  if (
-    (ball_coordinates[0] > player2[0] - r &&
-      ball_coordinates[1] >= player2[1] &&
-      ball_coordinates[1] <= player2[1] + rec_length) ||
-    (ball_coordinates[0] < player1[0] + r * 2 &&
-      ball_coordinates[1] >= player2[1] &&
-      ball_coordinates[1] <= player2[1] + rec_length)
-  ) {
+
+  // keeping array-access only once, since array access is not for modification
+  let ball_x = ball_coordinates[0];
+  let ball_y = ball_coordinates[1];
+  let ball_r = r;  // variable name for clarity
+  let player1_x = player1[0];
+  let player1_y = player1[1];
+  let player2_x = player2[0];
+  let player2_y = player2[1];
+
+  if ( p1Contact(ball_x, ball_y, ball_r, player1_x, player1_y, rec_length) ) {
     xspeed = -xspeed;
   }
+  if ( p2Contact(ball_x, ball_y, ball_r, player2_x, player2_y, rec_length) ) {
+    xspeed = -xspeed;
+  }
+
   // if (ball_coordinates[1] > height - r || ball_coordinates[1] < r) {
   //   yspeed = -yspeed;
   // }
