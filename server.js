@@ -39,7 +39,7 @@ var game_started = false;
 // Global variables that doesn't change
 const ball_coordinates = [150, 150];
 
-var xspeed = -0.1;
+var xspeed = 0.5;
 var yspeed = -1;
 
 var gameLobby = [];
