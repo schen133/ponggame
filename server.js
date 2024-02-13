@@ -1,5 +1,7 @@
 import { p1Contact, p2Contact } from "./physics.js";
 
+import { v4 as uuidv4 } from 'uuid';
+
 // const express = require("express");
 import express from "express";
 const app = express();
@@ -42,7 +44,10 @@ const ball_coordinates = [150, 150];
 var xspeed = 0.5;
 var yspeed = -1;
 
-var gameLobby = [];
+var gameLobby = {};
+var player_gameLobby = {}
+
+
 // but when
 // when game starts, we can assign a unique gameLobbyID
 // hash it: {gameLobbyID: {}, gameLobbyID: {}}
@@ -53,6 +58,60 @@ var gameLobby = [];
 
 // when game starts, pass gameLobbyID as a constructor into the object intialization
 // this way it will allow O(1) lookup and direct update of the memory allocated for the object
+// A class for gameObjectLobby is probbaly better, we can write better method logics to handle
+// sepecific logic for game object lobby
+class GameObjectLobby {
+  constructor(gameLobbyId, ball_coordinates, firstPlayerSocketID) {
+
+    // constructor called when we create a lobby,
+    // which we only create a lobby when there is a new connection but no other gamestarted == false lobby left
+    this.gameLobbyId = gameLobbyId
+    this.ball_coordinates = ball_coordinates
+    // the first time the game object lobby object is made, we only have one player for the lobby
+    this.gameStarted = false
+
+    this.player_positions = { [firstPlayerSocketID]: [20, 150] }
+    player_gameLobby[firstPlayerSocketID] = this.gameLobbyId
+  }
+  addNewPlayer(socketID) {
+
+    // player_positions is an dicitonary
+    this.player_positions[socketID] = [300, 150]
+    player_gameLobby[socketID] = this.gameLobbyId
+
+    // check if lobby has two players 
+    if (Object.values(this.player_positions).length == 2) {
+      this.startGame()
+    }
+  }
+  deletePlayer(socketID) {
+    delete this.player_positions[socketID]
+    console.log("player quit, current game lobby object: \n", this)
+  }
+  startGame() {
+
+    this.gameStarted = true
+  }
+
+  pauseGame() {
+
+    this.gameStarted = false
+  }
+
+
+
+
+}
+
+
+
+//function testingObject() {
+//  const testingClass = new GameObjectLobby("testingGLID", false, [150, 150],)
+//  console.log("hello, this is testingClass", testingClass)
+//  console.log(testingClass.gameLobbyId)
+//}
+//testingObject()
+
 
 // if a player from a on-going game quits in the middle of the game, we can take him
 // and re-assign him to a game-lobby that's current not filled
@@ -61,10 +120,26 @@ var gameLobby = [];
 // every actions by socket will be listened to here
 function newConnection(socket) {
   // on socket disconnecting, remove socket id from hashmap
+  // TODO: when player quit a on-going game, we can keep the game Lobby,
+  // but we need a game reset function to empty out the scores and etc...
   socket.on("disconnect", () => {
     delete players[socket.id];
+    const temp_lobby_id = player_gameLobby[socket.id]
+    // now we have the lobby id 
+    const gameLobby_object = gameLobby[temp_lobby_id]
+    if (gameLobby_object.gameStarted) {
+      gameLobby_object.pauseGame()
 
-    console.log(socket.id, "has quit the game");
+    }
+
+    gameLobby_object.deletePlayer(socket.id)
+    if (Object.values(gameLobby_object.player_positions).length == 0) {
+      delete gameLobby[temp_lobby_id]
+    }
+
+    console.log("player left lobby")
+    console.log("current game lobby list:\n", gameLobby)
+
   });
 
   // ensured each client has its own socket id
@@ -84,7 +159,25 @@ function newConnection(socket) {
       players[socket.id] = [20, 150];
     }
   }
+  // if there is no already existing game lobby that their game hasn't started yet,
+  // create a new gamaeLobby
+  // TODO: when two or more lobbies still have spots, the new player will join both lobbies
+  // So I think we can just return after adding it to one room (possibly better scheduling logic?)
+  Object.values(gameLobby).forEach((gameObjectLobby) => {
 
+    if (gameObjectLobby.gameStarted == false) {
+
+      gameObjectLobby.addNewPlayer(socket.id)
+    }
+
+  })
+  if (!(player_gameLobby[socket.id])) {
+    const generated_gameLobbyID = uuidv4()
+    gameLobby[generated_gameLobbyID] = new GameObjectLobby(generated_gameLobbyID, ball_coordinates, socket.id)
+
+  }
+  console.log("player joined lobby")
+  console.log("current game lobby list:\n", gameLobby)
 
   // on every new connection made, check if there is a game lobby that's ready to start
   // 
@@ -92,7 +185,8 @@ function newConnection(socket) {
   // if a player from a 
 
 
-
+  // This is to handle logic when the game starts
+  // When a new connection happens, we iterate through each room to check rooms that is ready to start 
   // TODOs: fix up some data not needed in the frontend
   if (Object.keys(players).length === 2) {
     var gamestart_data = {
@@ -109,7 +203,7 @@ function newConnection(socket) {
     // approximately 60 times a second -> to achieve 60 FPS ball movement on client side
     // do ball logic and emit every 16ms
     // or should be do logic the entire time and emit every 16 seconds?
-    setInterval(round, 5);
+    //setInterval(round, 5);
   }
 
   // each time server socket instance receives a signal from client socket instance
@@ -141,9 +235,9 @@ function round() {
 
   const player1 = iterator[0];
   const player2 = iterator[1];
-  
-  console.log(player1);
-  console.log(player2);
+
+  //console.log(player1);
+  //console.log(player2);
 
   ball_coordinates[0] += xspeed;
   // ball_coordinates[1] += yspeed;
@@ -158,10 +252,10 @@ function round() {
   let player2_x = player2[0];
   let player2_y = player2[1];
 
-  if ( p1Contact(ball_x, ball_y, ball_r, player1_x, player1_y, rec_length) ) {
+  if (p1Contact(ball_x, ball_y, ball_r, player1_x, player1_y, rec_length)) {
     xspeed = -xspeed;
   }
-  if ( p2Contact(ball_x, ball_y, ball_r, player2_x, player2_y, rec_length) ) {
+  if (p2Contact(ball_x, ball_y, ball_r, player2_x, player2_y, rec_length)) {
     xspeed = -xspeed;
   }
 
@@ -174,7 +268,7 @@ function round() {
   io.sockets.emit("ballposition", ball_coordinates);
 }
 
-function startgame(gamestarts) {}
+function startgame(gamestarts) { }
 
 // TODOs:
 // Probbaly need a lobby system as well
