@@ -61,40 +61,55 @@ var player_gameLobby = {}
 // A class for gameObjectLobby is probbaly better, we can write better method logics to handle
 // sepecific logic for game object lobby
 class GameObjectLobby {
-  constructor(gameLobbyId, ball_coordinates, firstPlayerSocketID) {
+  constructor(gameLobbyId, ball_coordinates) {
 
-    // constructor called when we create a lobby,
-    // which we only create a lobby when there is a new connection but no other gamestarted == false lobby left
+    this.available_coordinates = { 1: { taken: false, position: [20, 150] }, 2: { taken: false, position: [300, 150] } }
+    this.pos_track = {}
+    this.player_positions = {}
     this.gameLobbyId = gameLobbyId
     this.ball_coordinates = ball_coordinates
-    // the first time the game object lobby object is made, we only have one player for the lobby
     this.gameStarted = false
-
-    this.player_positions = { [firstPlayerSocketID]: [20, 150] }
-    player_gameLobby[firstPlayerSocketID] = this.gameLobbyId
   }
-  addNewPlayer(socketID) {
 
-    // player_positions is an dicitonary
-    this.player_positions[socketID] = [300, 150]
+  addNewPlayer(socketID) {
+    // go through all available_coordinates to see which is not taken
+    Object.keys(this.available_coordinates).every((key) => {
+      if (this.available_coordinates[key].taken == false) {
+        console.log(this.available_coordinates[key]["position"])
+        this.player_positions[socketID] = this.available_coordinates[key]["position"]
+        // found not taken, assign position and set taken to true
+        this.available_coordinates[key].taken = true
+        this.pos_track[socketID] = key
+        return false
+      }
+      else {
+        return true
+      }
+    })
     player_gameLobby[socketID] = this.gameLobbyId
 
     // check if lobby has two players 
     if (Object.values(this.player_positions).length == 2) {
       this.startGame()
     }
+    console.log(this)
   }
+
   deletePlayer(socketID) {
     delete this.player_positions[socketID]
+    const pos_key = this.pos_track[socketID]
+    // get pos_key (player 1 or player 2), then use that to set taken back to false
+    delete this.pos_track[socketID]
+    // set available_coordinates back to false again
+    this.available_coordinates[pos_key].taken = false
     console.log("player quit, current game lobby object: \n", this)
   }
-  startGame() {
 
+  startGame() {
     this.gameStarted = true
   }
 
   pauseGame() {
-
     this.gameStarted = false
   }
 
@@ -147,18 +162,6 @@ function newConnection(socket) {
   // we can use that record (their own socketID) to distinguish their own position vs opponent's
   socket.emit("socketID", socket.id);
 
-  //   on new connection, add socket id to hashmap
-  //   {socket.id: [],
-  //      socket.id: []    }
-  if (!(socket.id in players)) {
-    if (Object.keys(players).length > 0) {
-      count[socket.id] = 2;
-      players[socket.id] = [300, 150];
-    } else {
-      count[socket.id] = 1;
-      players[socket.id] = [20, 150];
-    }
-  }
   Object.values(gameLobby).every((gameObjectLobby) => {
 
     if (gameObjectLobby.gameStarted == false) {
@@ -175,8 +178,11 @@ function newConnection(socket) {
   })
   if (!(player_gameLobby[socket.id])) {
     const generated_gameLobbyID = uuidv4()
-    gameLobby[generated_gameLobbyID] = new GameObjectLobby(generated_gameLobbyID, ball_coordinates, socket.id)
+    //gameLobby[generated_gameLobbyID] = new GameObjectLobby(generated_gameLobbyID, ball_coordinates, socket.id)
 
+
+    gameLobby[generated_gameLobbyID] = new GameObjectLobby(generated_gameLobbyID, ball_coordinates)
+    gameLobby[generated_gameLobbyID].addNewPlayer(socket.id)
   }
   console.log("player joined lobby")
   console.log("current game lobby list:\n", gameLobby)
@@ -191,6 +197,7 @@ function newConnection(socket) {
   // When a new connection happens, we iterate through each room to check rooms that is ready to start 
   // TODOs: fix up some data not needed in the frontend
   if (Object.keys(players).length === 2) {
+
     var gamestart_data = {
       players: players,
       count: count,
