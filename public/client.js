@@ -33,7 +33,7 @@ function setup() {
   socket = io.connect("http://localhost:3000/");
 
   // get both id
-  socket.on("socketID", function (id) {
+  socket.on("socketID", function(id) {
     me_id = id;
   });
 

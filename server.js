@@ -41,7 +41,7 @@ var game_started = false;
 // Global variables that doesn't change
 const ball_coordinates = [150, 150];
 
-var xspeed = 0.5;
+var xspeed = -5;
 var yspeed = -1;
 
 var gameLobby = {};
@@ -159,15 +159,17 @@ function newConnection(socket) {
       players[socket.id] = [20, 150];
     }
   }
-  // if there is no already existing game lobby that their game hasn't started yet,
-  // create a new gamaeLobby
-  // TODO: when two or more lobbies still have spots, the new player will join both lobbies
-  // So I think we can just return after adding it to one room (possibly better scheduling logic?)
-  Object.values(gameLobby).forEach((gameObjectLobby) => {
+  Object.values(gameLobby).every((gameObjectLobby) => {
 
     if (gameObjectLobby.gameStarted == false) {
 
       gameObjectLobby.addNewPlayer(socket.id)
+      //break out of the loop to avoid pushing to other lobby
+      return false
+    }
+    else {
+      //return true as in continueing looking for open lobby
+      return true
     }
 
   })
@@ -203,7 +205,7 @@ function newConnection(socket) {
     // approximately 60 times a second -> to achieve 60 FPS ball movement on client side
     // do ball logic and emit every 16ms
     // or should be do logic the entire time and emit every 16 seconds?
-    //setInterval(round, 5);
+    setInterval(round, 16);
   }
 
   // each time server socket instance receives a signal from client socket instance
